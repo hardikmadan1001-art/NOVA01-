@@ -1,0 +1,1329 @@
+/* ==================================================================
+   SQUIGG — one design system
+   ==================================================================
+
+   A notebook that remembers.
+
+   The whole sheet is written from one idea: this is paper, not a screen.
+   Everything below exists to protect that.
+
+     · Palette   vanilla paper, ink that is always berry-tinged, and a
+                 single crayon pink that is allowed to shout. Butter, mint
+                 and grape are sticker colours — never UI.
+     · Type      Fraunces owns every display size (a soft, wonky serif that
+                 behaves like a rounded sans at 88px). General Sans carries
+                 the interface. Shantell Sans annotates it, like a pencil
+                 note in a margin.
+     · Surfaces  matte, warm, hairline-bordered. Depth comes from a 4px
+                 hard shadow on buttons and a whisper-soft blur on cards —
+                 never from glass, gradient or glow.
+   ================================================================== */
+
+.sq-root {
+  /* ---- Paper & ink ---------------------------------------------- */
+  --sq-paper: #fff8f0;
+  --sq-graphite: #221e24;
+  --sq-berry-ink: #3a1730;
+  --sq-crayon: #e8447e;
+  --sq-jam: #a32359;
+  --sq-petal: #fbeaf1;
+
+  /* ---- Sticker decorative only ---------------------------------- */
+  --sq-butter: #ffd35c;
+  --sq-mint: #4fd1ae;
+  --sq-grape: #b18cf5;
+  --sq-dust: #c7bfc5;
+
+  /* ---- Ink weights ---------------------------------------------- */
+  --sq-ink-soft: rgba(58, 23, 48, 0.66);
+  --sq-ink-faint: rgba(58, 23, 48, 0.42);
+  --sq-line: rgba(58, 23, 48, 0.13);
+  --sq-line-strong: rgba(58, 23, 48, 0.3);
+  --sq-highlight: rgba(232, 68, 126, 0.16);
+
+  /* ---- Depth: two shadows, both quiet --------------------------- */
+  --sq-shadow: 0 2px 20px rgba(58, 23, 48, 0.06);
+  --sq-lift: 0 22px 44px -26px rgba(58, 23, 48, 0.32);
+  --sq-press: 0 4px 0 var(--sq-jam);
+  --sq-press-down: 0 1px 0 var(--sq-jam);
+
+  /* ---- Type ----------------------------------------------------- */
+  --sq-display: var(--font-fraunces), Fraunces, Georgia, "Times New Roman", serif;
+  --sq-body: var(--font-general), ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --sq-hand: var(--font-shantell), "Shantell Sans", ui-rounded, cursive;
+
+  /* ---- Steps ---------------------------------------------------- */
+  --sq-t-display: clamp(44px, 7.2vw, 88px);
+  --sq-t-statement: clamp(46px, 8.6vw, 120px);
+  --sq-t-heading-lg: clamp(32px, 3.6vw, 46px);
+  --sq-t-heading: clamp(26px, 2.8vw, 36px);
+  --sq-t-subheading: 24px;
+  --sq-t-body: 18px;
+  --sq-t-caption: 16px;
+  --sq-t-hand: 21px;
+  --sq-t-micro: 13px;
+
+  /* ---- Layout --------------------------------------------------- */
+  --sq-page: 1200px;
+  --sq-band: clamp(76px, 9vw, 132px);
+  --sq-gutter: clamp(20px, 3vw, 32px);
+
+  /* ---- Radii: cards stop at 20, pills go all the way ------------ */
+  --sq-r-sm: 8px;
+  --sq-r: 16px;
+  --sq-r-lg: 20px;
+  --sq-r-band: 56px;
+  --sq-r-pill: 999px;
+
+  position: relative;
+  isolation: isolate;
+  background: var(--sq-paper);
+  color: var(--sq-graphite);
+  font-family: var(--sq-body);
+  font-size: var(--sq-t-body);
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: -0.008em;
+  overflow-x: clip;
+}
+
+/* The document itself is paper here, overscroll included.
+   `clip` rather than `hidden` on the body: it still stops the horizontal
+   scroll, but unlike `hidden` it does not turn an ancestor into a scroll
+   container, which is what breaks the pinned chapters. */
+html:has(.sq-root),
+body:has(.sq-root) {
+  background: #fff8f0;
+  overflow-x: clip;
+}
+
+.sq-root ::selection {
+  background: var(--sq-crayon);
+  color: var(--sq-paper);
+}
+
+.sq-root :focus-visible {
+  outline: 2px solid var(--sq-crayon);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+/* Paper tooth. Fixed, inert, and the only texture on the site. */
+.sq-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 220 220' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size: 220px 220px;
+}
+
+/* ==================================================================
+   The room: a fixed canvas of paper behind a page of paper
+   ================================================================== */
+
+.sq-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.sq-page {
+  position: relative;
+  z-index: 1;
+}
+
+/* Warm vignette so the edges of the canvas never read as a rectangle. */
+.sq-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 78% 70% at 50% 45%,
+    rgba(255, 248, 240, 0) 40%,
+    rgba(255, 236, 219, 0.5) 100%
+  );
+}
+
+/* ==================================================================
+   Layout
+   ================================================================== */
+
+.sq-wrap {
+  width: 100%;
+  max-width: var(--sq-page);
+  margin-inline: auto;
+  padding-inline: var(--sq-gutter);
+}
+
+.sq-band {
+  padding-block: var(--sq-band);
+  position: relative;
+}
+
+.sq-band-tight {
+  padding-block: clamp(56px, 6vw, 88px);
+}
+
+.sq-rule {
+  height: 1px;
+  width: 100%;
+  background: var(--sq-line);
+  border: 0;
+}
+
+/* Surfaces alternate; there are only ever three. */
+.sq-surface-petal {
+  background: var(--sq-petal);
+}
+
+.sq-surface-paper {
+  background: var(--sq-paper);
+}
+
+.sq-surface-berry {
+  background: var(--sq-crayon);
+  color: var(--sq-paper);
+}
+
+.sq-surface-berry .sq-body,
+.sq-surface-berry .sq-caption {
+  color: rgba(255, 248, 240, 0.82);
+}
+
+/* Half-bleed label stuck to the page edge, like a tab. */
+.sq-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  border: 1.5px solid var(--sq-line-strong);
+  border-radius: var(--sq-r-pill);
+  background: var(--sq-paper);
+  color: var(--sq-berry-ink);
+  font-family: var(--sq-hand);
+  font-size: var(--sq-t-caption);
+  line-height: 1.2;
+}
+
+/* ==================================================================
+   Type
+   ================================================================== */
+
+.sq-display {
+  font-family: var(--sq-display);
+  font-size: var(--sq-t-display);
+  font-weight: 600;
+  font-variation-settings: "SOFT" 40, "WONK" 1;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  text-transform: lowercase;
+  color: var(--sq-berry-ink);
+  text-wrap: balance;
+}
+
+.sq-statement {
+  font-family: var(--sq-display);
+  font-size: var(--sq-t-statement);
+  font-weight: 600;
+  font-variation-settings: "SOFT" 40, "WONK" 1;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  text-transform: lowercase;
+  color: var(--sq-berry-ink);
+}
+
+.sq-heading {
+  font-family: var(--sq-display);
+  font-size: var(--sq-t-heading);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--sq-berry-ink);
+  text-wrap: balance;
+}
+
+.sq-heading-lg {
+  font-family: var(--sq-display);
+  font-size: var(--sq-t-heading-lg);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.022em;
+  text-transform: lowercase;
+  color: var(--sq-berry-ink);
+  text-wrap: balance;
+}
+
+.sq-subheading {
+  font-family: var(--sq-display);
+  font-size: var(--sq-t-subheading);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+  color: var(--sq-berry-ink);
+}
+
+.sq-body {
+  font-size: var(--sq-t-body);
+  line-height: 1.55;
+  color: var(--sq-ink-soft);
+  max-width: 46ch;
+}
+
+.sq-caption {
+  font-size: var(--sq-t-caption);
+  line-height: 1.5;
+  color: var(--sq-ink-soft);
+}
+
+.sq-micro {
+  font-size: var(--sq-t-micro);
+  line-height: 1.45;
+  color: var(--sq-ink-faint);
+}
+
+.sq-label {
+  font-size: var(--sq-t-micro);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sq-ink-faint);
+}
+
+/* Handwriting. Annotation only — never a heading, never body copy. */
+.sq-hand {
+  font-family: var(--sq-hand);
+  font-size: var(--sq-t-hand);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--sq-crayon);
+  letter-spacing: 0;
+}
+
+.sq-hand-sm {
+  font-family: var(--sq-hand);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--sq-crayon);
+}
+
+.sq-hand-ink {
+  color: var(--sq-berry-ink);
+}
+
+/* Inline emphasis: a highlighter stroke, not a bold weight. */
+.sq-mark {
+  position: relative;
+  isolation: isolate;
+  color: var(--sq-berry-ink);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.sq-mark::after {
+  content: "";
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  bottom: 0.06em;
+  height: 0.42em;
+  background: var(--sq-butter);
+  border-radius: 2px;
+  z-index: -1;
+  transform: rotate(-0.6deg);
+}
+
+.sq-mark-berry::after {
+  background: var(--sq-highlight);
+}
+
+/* ==================================================================
+   Controls — one solid action, one quiet one
+   ================================================================== */
+
+.sq-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 17px 32px;
+  border: 0;
+  border-radius: var(--sq-r-pill);
+  background: var(--sq-crayon);
+  color: var(--sq-paper);
+  font-family: var(--sq-body);
+  font-size: var(--sq-t-body);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: var(--sq-press);
+  transition: transform 140ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1), background-color 200ms ease;
+}
+
+.sq-btn:hover {
+  background: #ee5590;
+  transform: translateY(-1px);
+  box-shadow: 0 5px 0 var(--sq-jam);
+}
+
+.sq-btn:active {
+  transform: translateY(3px);
+  box-shadow: var(--sq-press-down);
+}
+
+.sq-btn-sm {
+  padding: 12px 22px;
+  font-size: var(--sq-t-caption);
+}
+
+.sq-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 24px;
+  border: 1.5px solid var(--sq-line-strong);
+  border-radius: var(--sq-r-pill);
+  background: transparent;
+  color: var(--sq-berry-ink);
+  font-family: var(--sq-body);
+  font-size: var(--sq-t-caption);
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 200ms ease, background-color 200ms ease;
+}
+
+.sq-btn-ghost:hover {
+  border-color: var(--sq-berry-ink);
+  background: rgba(58, 23, 48, 0.04);
+}
+
+.sq-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--sq-jam);
+  font-size: var(--sq-t-caption);
+  font-weight: 500;
+  text-decoration: none;
+  border-bottom: 1.5px solid rgba(163, 35, 89, 0.35);
+  padding-bottom: 2px;
+  transition: border-color 200ms ease;
+}
+
+.sq-link:hover {
+  border-color: var(--sq-jam);
+}
+
+/* ==================================================================
+   Surfaces
+   ================================================================== */
+
+.sq-card {
+  border: 1.5px solid var(--sq-line);
+  border-radius: var(--sq-r-lg);
+  background: var(--sq-paper);
+  padding: clamp(22px, 2.6vw, 32px);
+  box-shadow: var(--sq-shadow);
+}
+
+.sq-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border: 1.5px solid var(--sq-line-strong);
+  border-radius: var(--sq-r-pill);
+  background: var(--sq-paper);
+  font-family: var(--sq-body);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--sq-berry-ink);
+  white-space: nowrap;
+}
+
+.sq-portrait {
+  border: 1.5px solid var(--sq-line);
+  border-radius: var(--sq-r-lg);
+  background: var(--sq-petal);
+  overflow: hidden;
+  box-shadow: var(--sq-shadow);
+}
+
+/* ==================================================================
+   Stickers — personality, not navigation
+   ================================================================== */
+
+.sq-sticker {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+  filter: drop-shadow(0 3px 0 rgba(58, 23, 48, 0.08));
+  will-change: transform;
+}
+
+.sq-sticker-wobble {
+  animation: sq-wobble 9s ease-in-out infinite;
+  animation-delay: var(--sq-wobble-delay, 0s);
+}
+
+@keyframes sq-wobble {
+  0%,
+  100% {
+    transform: rotate(var(--sq-tilt, 0deg)) translateY(0);
+  }
+  50% {
+    transform: rotate(calc(var(--sq-tilt, 0deg) + 2.4deg)) translateY(-6px);
+  }
+}
+
+.sq-float-slow {
+  animation: sq-float 7.5s ease-in-out infinite;
+  animation-delay: var(--sq-wobble-delay, 0s);
+}
+
+@keyframes sq-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--sq-tilt, 0deg));
+  }
+  50% {
+    transform: translateY(-14px) rotate(calc(var(--sq-tilt, 0deg) - 2deg));
+  }
+}
+
+/* ==================================================================
+   Reveal — used by every section, staggered with --sq-delay
+   ================================================================== */
+
+.sq-reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  transition: opacity 900ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 900ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--sq-delay, 0ms);
+}
+
+.sq-reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* A masked block animates line by line — the container must not also
+   fade and slide, or the two motions fight each other. */
+.sq-reveal:has(.sq-mask) {
+  opacity: 1;
+  transform: none;
+}
+
+/* Masked line reveal for statements — the type rises out of its own box. */
+/* The padding gives descenders room inside the clipping box; the matching
+   negative margin keeps the block's rhythm unchanged. */
+.sq-mask {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.2em;
+  margin-bottom: -0.2em;
+}
+
+.sq-mask > span {
+  display: block;
+  transform: translateY(105%);
+  transition: transform 1100ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: var(--sq-delay, 0ms);
+}
+
+.is-in .sq-mask > span {
+  transform: none;
+}
+
+/* Connector strokes draw themselves in. */
+.sq-draw path,
+.sq-draw line {
+  stroke-dasharray: var(--sq-dash, 600);
+  stroke-dashoffset: var(--sq-dash, 600);
+  transition: stroke-dashoffset 1400ms cubic-bezier(0.33, 1, 0.68, 1);
+  transition-delay: var(--sq-delay, 120ms);
+}
+
+.is-in .sq-draw path,
+.is-in .sq-draw line {
+  stroke-dashoffset: 0;
+}
+
+/* ==================================================================
+   Header — stationery on a desk, not a toolbar
+   ================================================================== */
+
+.sq-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.sq-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  max-width: 1440px;
+  margin-inline: auto;
+  padding: clamp(14px, 1.6vw, 22px) clamp(18px, 3vw, 40px) 0;
+}
+
+.sq-header > .sq-header-inner > * {
+  pointer-events: auto;
+}
+
+.sq-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--sq-berry-ink);
+  font-family: var(--sq-display);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  cursor: pointer;
+}
+
+.sq-nav {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+.sq-nav-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--sq-ink-soft);
+  font-family: var(--sq-body);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 200ms ease;
+}
+
+.sq-nav-link:hover,
+.sq-nav-link[data-active="true"] {
+  color: var(--sq-crayon);
+}
+
+/* ==================================================================
+   Hero
+   ================================================================== */
+
+.sq-hero {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  padding-block: clamp(120px, 16vh, 180px) clamp(60px, 8vh, 96px);
+}
+
+.sq-hero-copy {
+  position: relative;
+  z-index: 4;
+  width: min(560px, 52%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 22px;
+}
+
+.sq-hero-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sq-hero-cta {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+/* ==================================================================
+   Chapters — pinned copy panels over the fixed notebook stage
+   ================================================================== */
+
+.sq-chapter {
+  position: relative;
+  min-height: 150vh;
+}
+
+.sq-chapter-inner {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  display: flex;
+  align-items: center;
+}
+
+/* The wrap becomes the vertical axis so a panel can sit high, centred or
+   low. The notebook stays roughly centred in the canvas, so shifting the
+   copy is what breaks the four-chapters-of-the-same-thing rhythm. */
+.sq-chapter-inner > .sq-wrap {
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.sq-chapter-copy {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: min(400px, 42%);
+  align-self: center;
+}
+
+.sq-chapter-copy[data-align="top"] {
+  align-self: flex-start;
+  padding-top: clamp(104px, 17vh, 168px);
+}
+
+.sq-chapter-copy[data-align="bottom"] {
+  align-self: flex-end;
+  padding-bottom: clamp(28px, 5vh, 64px);
+}
+
+.sq-chapter-index {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.sq-chapter-num {
+  font-family: var(--sq-display);
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--sq-crayon);
+  font-variation-settings: "SOFT" 40, "WONK" 1;
+}
+
+/* ==================================================================
+   Feature demos — each one is a page of the notebook
+   ================================================================== */
+
+.sq-feature {
+  display: grid;
+  gap: clamp(32px, 5vw, 72px);
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+}
+
+.sq-feature-flip {
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+}
+
+.sq-feature-flip .sq-feature-copy {
+  order: 2;
+}
+
+/* ---- A ruled notebook page ------------------------------------- */
+
+/* Flat paper, and nothing clipped: the stickers on these pages are meant to
+   hang off the edge, which is the whole reason they read as physical. */
+.sq-note {
+  position: relative;
+  border: 1.5px solid var(--sq-line);
+  border-radius: var(--sq-r-lg);
+  background: #fffdfa;
+  box-shadow: var(--sq-lift);
+  padding: clamp(24px, 3vw, 40px);
+}
+
+/* The margin rule every notebook has. */
+.sq-note::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: clamp(40px, 5vw, 62px);
+  width: 1.5px;
+  background: rgba(232, 68, 126, 0.28);
+}
+
+.sq-note-lines {
+  position: relative;
+  padding-left: clamp(24px, 3.4vw, 42px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sq-note-line {
+  font-family: var(--sq-hand);
+  font-size: clamp(18px, 1.6vw, 22px);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--sq-berry-ink);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 500ms ease, transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--sq-delay, 0ms);
+  width: fit-content;
+}
+
+.is-in .sq-note-line {
+  opacity: 1;
+  transform: none;
+}
+
+.sq-note-line-soft {
+  color: rgba(58, 23, 48, 0.5);
+  font-weight: 500;
+}
+
+/* Words the notebook recognised. `isolation` keeps the highlighter stroke
+   inside this box — without it a negative-z pseudo element drops behind the
+   page's own background and disappears. */
+.sq-note-line[data-word] {
+  position: relative;
+  isolation: isolate;
+}
+
+.sq-note-line[data-word]::after {
+  content: "";
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  top: 52%;
+  height: 0.62em;
+  transform: translateY(-50%) scaleX(0) rotate(-0.7deg);
+  transform-origin: left center;
+  background: var(--sq-butter);
+  border-radius: 3px;
+  z-index: -1;
+  transition: transform 620ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--sq-delay, 0ms);
+}
+
+.is-in .sq-note-line[data-word]::after {
+  transform: translateY(-50%) scaleX(1) rotate(-0.7deg);
+}
+
+.sq-note-foot {
+  margin-top: 22px;
+  padding-left: clamp(24px, 3.4vw, 42px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* AI reply card — sits inside the notebook, wired to the page. */
+.sq-reply {
+  position: relative;
+  margin-top: 26px;
+  padding: 22px 24px;
+  border: 1.5px solid rgba(232, 68, 126, 0.32);
+  border-radius: var(--sq-r);
+  background: var(--sq-petal);
+}
+
+.sq-reply::before {
+  content: "";
+  position: absolute;
+  top: -11px;
+  left: 34px;
+  width: 18px;
+  height: 18px;
+  background: var(--sq-petal);
+  border-left: 1.5px solid rgba(232, 68, 126, 0.32);
+  border-top: 1.5px solid rgba(232, 68, 126, 0.32);
+  transform: rotate(45deg);
+}
+
+.sq-reply-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 12px;
+}
+
+.sq-reply-text {
+  font-size: var(--sq-t-caption);
+  line-height: 1.6;
+  color: var(--sq-berry-ink);
+  max-width: 48ch;
+}
+
+/* ---- Layered pages (feature 02) -------------------------------- */
+
+.sq-layers {
+  position: relative;
+  min-height: 420px;
+}
+
+.sq-layer {
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid var(--sq-line);
+  border-radius: var(--sq-r-lg);
+  background: var(--sq-paper);
+  padding: clamp(20px, 2.4vw, 30px);
+  box-shadow: var(--sq-lift);
+  transition: transform 1000ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 800ms ease;
+  transition-delay: var(--sq-delay, 0ms);
+}
+
+.sq-layer:nth-child(2) {
+  background: #fffdfa;
+}
+.sq-layer:nth-child(3) {
+  background: var(--sq-petal);
+}
+.sq-layer:nth-child(4) {
+  background: var(--sq-paper);
+}
+
+.sq-layer-date {
+  font-family: var(--sq-hand);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--sq-crayon);
+}
+
+.sq-layer-text {
+  margin-top: 12px;
+  font-family: var(--sq-hand);
+  font-size: 19px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--sq-berry-ink);
+}
+
+/* ---- Transformed outputs (feature 04) -------------------------- */
+
+.sq-outputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sq-output {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 20px;
+  border: 1.5px solid var(--sq-line-strong);
+  border-radius: var(--sq-r-pill);
+  background: var(--sq-paper);
+  font-family: var(--sq-body);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--sq-berry-ink);
+  box-shadow: 0 2px 0 rgba(58, 23, 48, 0.1);
+  opacity: 0;
+  transform: translateY(14px) rotate(-1deg);
+  transition: opacity 600ms ease, transform 700ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: var(--sq-delay, 0ms);
+}
+
+.is-in .sq-output {
+  opacity: 1;
+  transform: translateY(0) rotate(var(--sq-tilt, 0deg));
+}
+
+.sq-output-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--sq-crayon);
+}
+
+/* ==================================================================
+   Knowledge moment — the page that quietly became organised
+   ================================================================== */
+
+/* Opaque on purpose: this is the one chapter where the notebook steps out.
+   The measured statement glyphs run to ~1005px, so no placement of the
+   object in the right column clears them — and the connection drawing needs
+   the whole width anyway. The band gives the reader somewhere quiet. */
+.sq-knowledge {
+  position: relative;
+  background: var(--sq-petal);
+  border-radius: var(--sq-r-band) var(--sq-r-band) 0 0;
+}
+
+.sq-knowledge-page {
+  position: relative;
+  margin-top: clamp(40px, 5vw, 64px);
+  border: 1.5px solid var(--sq-line);
+  border-radius: var(--sq-r-lg);
+  background: #fffdfa;
+  padding: clamp(28px, 4vw, 56px);
+  box-shadow: var(--sq-lift);
+  min-height: clamp(420px, 52vw, 620px);
+}
+
+.sq-thread {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+  overflow: visible;
+}
+
+.sq-scribble {
+  position: absolute;
+  font-family: var(--sq-hand);
+  font-size: clamp(15px, 1.4vw, 19px);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--sq-berry-ink);
+  max-width: 22ch;
+}
+
+/* ==================================================================
+   Showcase — the shelf of notebooks
+   ================================================================== */
+
+.sq-shelf {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: clamp(24px, 3vw, 44px);
+  align-items: end;
+}
+
+.sq-book {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  perspective: 900px;
+}
+
+.sq-book-object {
+  position: relative;
+  width: 100%;
+  max-width: 240px;
+  aspect-ratio: 3 / 4;
+  transform: rotateY(var(--sq-ry, -16deg)) rotateX(3deg) rotateZ(var(--sq-rz, -1.4deg));
+  transform-style: preserve-3d;
+  transition: transform 700ms cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: default;
+}
+
+.sq-book:hover .sq-book-object {
+  transform: rotateY(0deg) rotateX(0deg) rotateZ(0deg) translateY(-8px);
+}
+
+.sq-book-cover {
+  position: absolute;
+  inset: 0;
+  border-radius: 4px 14px 14px 4px;
+  box-shadow: var(--sq-lift);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 22px 20px;
+}
+
+.sq-book-spine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 14px;
+  background: rgba(34, 30, 36, 0.12);
+  border-right: 1px solid rgba(34, 30, 36, 0.08);
+}
+
+.sq-book-label {
+  align-self: center;
+  margin-top: auto;
+  padding: 8px 12px;
+  border: 1px solid rgba(34, 30, 36, 0.18);
+  border-radius: 4px;
+  background: rgba(255, 253, 250, 0.86);
+  font-family: var(--sq-hand);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--sq-berry-ink);
+  text-align: center;
+  line-height: 1.25;
+}
+
+.sq-book-caption {
+  font-family: var(--sq-hand);
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--sq-crayon);
+  transform: rotate(-1.6deg);
+  text-align: center;
+}
+
+/* ==================================================================
+   Closing statement + footer band
+   ================================================================== */
+
+.sq-final {
+  position: relative;
+  background: var(--sq-crayon);
+  color: var(--sq-paper);
+  border-radius: var(--sq-r-band) var(--sq-r-band) 0 0;
+  overflow: hidden;
+}
+
+.sq-final .sq-statement,
+.sq-final .sq-display {
+  color: var(--sq-paper);
+}
+
+.sq-final-inner {
+  position: relative;
+  z-index: 2;
+}
+
+.sq-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: clamp(18px, 3vw, 40px);
+}
+
+.sq-footer-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: rgba(255, 248, 240, 0.82);
+  font-family: var(--sq-body);
+  font-size: 15px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 200ms ease;
+}
+
+.sq-footer-link:hover {
+  color: var(--sq-paper);
+}
+
+.sq-footer-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--sq-display);
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* ==================================================================
+   Utilities
+   ================================================================== */
+
+.sq-stack {
+  display: flex;
+  flex-direction: column;
+}
+
+.sq-row {
+  display: flex;
+  align-items: center;
+}
+
+.sq-grid-2 {
+  display: grid;
+  gap: clamp(28px, 4vw, 64px);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sq-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ==================================================================
+   Breakpoints
+   ================================================================== */
+
+@media (max-width: 1024px) {
+  .sq-hero-copy {
+    width: min(520px, 60%);
+  }
+
+  .sq-feature,
+  .sq-feature-flip {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sq-feature-flip .sq-feature-copy {
+    order: 0;
+  }
+
+  /* Slimmer column at this size: the notebook's footprint is fixed in world
+     units while the copy scales with the viewport, so the gutter closes up
+     faster than it looks like it should. */
+  .sq-chapter-copy {
+    width: min(340px, 44%);
+  }
+}
+
+/* Portrait tablets and large phones: the copy goes full width and the
+   notebook moves behind it, so it needs a paper veil to stay legible.
+   This is a breakpoint earlier than the hero's, because the pinned chapters
+   are the part that genuinely runs out of room. */
+@media (max-width: 900px) {
+  .sq-chapter,
+  .sq-chapter-inner {
+    min-height: auto;
+    height: auto;
+  }
+
+  .sq-chapter {
+    padding-block: clamp(72px, 14vh, 120px);
+  }
+
+  .sq-chapter-inner,
+  .sq-chapter-inner > .sq-wrap {
+    display: block;
+    height: auto;
+  }
+
+  .sq-chapter-copy,
+  .sq-chapter-copy[data-align="top"],
+  .sq-chapter-copy[data-align="bottom"] {
+    width: 100%;
+    max-width: 34rem;
+    align-self: auto;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .sq-chapter-copy::before {
+    content: "";
+    position: absolute;
+    inset: -22px -18px -22px -18px;
+    z-index: -1;
+    background: radial-gradient(
+      ellipse 80% 70% at 45% 45%,
+      rgba(255, 248, 240, 0.95),
+      rgba(255, 248, 240, 0) 100%
+    );
+  }
+}
+
+@media (max-width: 760px) {
+  .sq-root {
+    --sq-t-hand: 19px;
+    --sq-t-subheading: 21px;
+  }
+
+  /* Still a full first screen: with the copy stacked and the notebook
+     behind it, a hero that stops short reads as a broken band rather than
+     an opening. */
+  .sq-hero {
+    min-height: 94svh;
+    padding-block: 116px 64px;
+  }
+
+  .sq-hero-copy {
+    width: 100%;
+    max-width: 34rem;
+  }
+
+  /* Mobile keeps the story but the object moves behind the copy, so the
+     copy needs a paper veil to stay legible. */
+  .sq-hero-copy::before {
+    content: "";
+    position: absolute;
+    inset: -28px -20px -24px -20px;
+    z-index: -1;
+    background: radial-gradient(
+      ellipse 78% 62% at 40% 40%,
+      rgba(255, 248, 240, 0.94),
+      rgba(255, 248, 240, 0) 100%
+    );
+  }
+
+  .sq-grid-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sq-nav {
+    display: none;
+  }
+
+  .sq-layers {
+    position: relative;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .sq-layer {
+    position: relative;
+  }
+
+  .sq-knowledge,
+  .sq-final {
+    border-radius: var(--sq-r-band) var(--sq-r-band) 0 0;
+  }
+}
+
+/* ==================================================================
+   Reduced motion — everything still readable, nothing moves
+   ================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .sq-root *,
+  .sq-root *::before,
+  .sq-root *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .sq-reveal,
+  .sq-mask > span,
+  .sq-note-line,
+  .sq-output,
+  .sq-layer {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .sq-draw path,
+  .sq-draw line {
+    stroke-dashoffset: 0 !important;
+  }
+
+  .sq-note-line[data-word]::after {
+    transform: translateY(-50%) scaleX(1) rotate(-0.7deg) !important;
+  }
+}

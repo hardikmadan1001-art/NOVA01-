@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-canvas: #FDFBF7;
+  --color-white: #FFFFFF;
+  --color-ink: #1E1E24;
+  --color-ink-secondary: #454554;
+  --color-muted: #67677E;
+
+  --color-pink: #FF5C8A;
+  --color-yellow: #FFD166;
+  --color-mint: #06D6A0;
+  --color-orange: #F97316;
+  --color-indigo: #2B2D42;
+
+  --color-pale-blue: #EAF0FF;
+  --color-pale-lilac: #F9E8FF;
+  --color-pale-peach: #F4E5D9;
+  --color-soft-apricot: #FAD8AC;
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+.neo-brutalist-card {
+  background: var(--color-white);
+  border: 3px solid var(--color-ink);
+  box-shadow: 4px 4px 0 var(--color-ink);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.neo-brutalist-card:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 0 var(--color-ink);
+}
+
+.font-display {
+  font-family: 'Fredoka', sans-serif;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.font-pixel {
+  font-family: 'Press Start 2P', cursive;
+}
