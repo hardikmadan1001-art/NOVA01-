@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useRef } from 'react';
 import * as THREE from 'three';
 import { createMatteMaterial } from '@/lib/three/materials';

@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from 'react';
 import ProductCanvas from '@/components/scenes/ProductCanvas';
 import D1Model from '@/components/scenes/D1Model';
@@ -23,7 +25,7 @@ export default function D1Section() {
           <div className="flex justify-between items-center mb-4">
             <span className="text-xs font-mono uppercase">System Status</span>
             <span className="text-xs font-mono text-green-400">ACTIVE</span>
-          </div
+          </div>
           <div className="text-4xl font-mono text-center py-8 border-y border-white/20">
             VAL: {dialValue.toString().padStart(3, '0')}
           </div>

@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from 'react';
 import ProductCanvas from '@/components/scenes/ProductCanvas';
 import M1Model from '@/components/scenes/M1Model';
