@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ProductColorId } from '../types/product';
+import { ProductColorId } from '@/types/product';
 
 export const BRAND_COLORS: Record<ProductColorId, string> = {
   "bubblegum-pink": "#FF5C8A",
