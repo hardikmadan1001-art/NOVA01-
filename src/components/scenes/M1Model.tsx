@@ -8,11 +8,12 @@ import { ProductColorId } from '@/types/product';
 
 interface M1ModelProps {
   colorId: ProductColorId;
+  position?: [number, number, number];
 }
 
-export default function M1Model({ colorId }: M1ModelProps) {
+export default function M1Model({ colorId, position = [0, 0, 0] }: M1ModelProps) {
   return (
-    <group dispose={null}>
+    <group dispose={null} position={position}>
       {/* Simple Mouse Shell - Sphere distorted */}
       <mesh rotation={[0, Math.PI / 4, 0]}>
         <sphereGeometry args={[0.4, 32, 32]} />

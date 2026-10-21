@@ -37,9 +37,9 @@ export default function K1Section() {
         
         <div className="w-2/3 h-full relative">
           <ProductCanvas cameraPosition={[0, 2, 5]} target={[0, 0, 0]}>
-            <K1Model 
-              colorId={PRODUCTS.k1.defaultColor} 
-              exploded={explodedValue} 
+            <K1Model
+              colorId={PRODUCTS.k1.defaultColor}
+              exploded={Number(explodedValue)}
             />
           </ProductCanvas>
         </div>

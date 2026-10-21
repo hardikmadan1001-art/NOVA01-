@@ -1,3 +1,5 @@
+"use client";
+
 import React from 'react';
 import * as THREE from 'three';
 import { createTranslucentMaterial } from '@/lib/three/materials';
@@ -7,11 +9,12 @@ import { ProductColorId } from '@/types/product';
 interface K1ModelProps {
   colorId: ProductColorId;
   exploded: number; // 0 to 1
+  position?: [number, number, number];
 }
 
-export default function K1Model({ colorId, exploded = 0 }: K1ModelProps) {
+export default function K1Model({ colorId, exploded = 0, position = [0, 0, 0] }: K1ModelProps) {
   return (
-    <group dispose={null}>
+    <group dispose={null} position={position}>
       {/* Chassis */}
       <mesh position={[0, -0.1 * exploded, 0]}>
         <boxGeometry args={[2, 0.2, 1]} />

@@ -27,7 +27,7 @@ export default function ProductCanvas({
       />
 
       <Suspense fallback={null}>
-        <Stage environment="city" intensity={0.5} contactShadow={true} shadowBias={-0.001}>
+        <Stage environment="city" intensity={0.5} shadowBias={-0.001}>
           {children}
         </Stage>
         <Environment preset="city" />
