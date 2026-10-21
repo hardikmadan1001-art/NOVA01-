@@ -1,3 +1,5 @@
+"use client";
+
 import React from 'react';
 import { PRODUCTS, HOTBAR_SLOTS } from '@/data/products';
 import { Telescope, Hammer, Book, Keyboard, MousePointer2, Disc, Anvil, Scroll, Package } from 'lucide-react';
